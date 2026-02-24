@@ -223,39 +223,44 @@ class Store:
 # ----------------------------
 # UI styles / fonts
 # ----------------------------
-ZEBRA_EVEN = "#1f2530"
-ZEBRA_ODD = "#252c3a"
-DONE_FG = "#8f96a3"
+ZEBRA_EVEN = "#202736"
+ZEBRA_ODD = "#293347"
+DONE_FG = "#93a0b8"
 
-SPACE_1 = 6
-SPACE_2 = 10
-SPACE_3 = 14
+SPACE_1 = 8
+SPACE_2 = 12
+SPACE_3 = 16
 
 
 def setup_global_fonts_and_styles(root: tb.Window) -> None:
     default_font = tkfont.nametofont("TkDefaultFont")
-    default_font.configure(size=11)
+    default_font.configure(size=12)
     root.option_add("*Font", default_font)
 
     heading_font = tkfont.nametofont("TkHeadingFont")
-    heading_font.configure(size=11, weight="bold")
+    heading_font.configure(size=12, weight="bold")
 
-    title_font = tkfont.Font(family=default_font.cget("family"), size=12, weight="bold")
+    title_font = tkfont.Font(family=default_font.cget("family"), size=13, weight="bold")
 
-    small_ui_font = tkfont.Font(family=default_font.cget("family"), size=10)
-    label_bold_font = tkfont.Font(family=default_font.cget("family"), size=10, weight="bold")
+    small_ui_font = tkfont.Font(family=default_font.cget("family"), size=11)
+    label_bold_font = tkfont.Font(family=default_font.cget("family"), size=11, weight="bold")
 
     style = ttk.Style()
     style.configure("Treeview", rowheight=40)
     style.configure("Treeview.Heading", font=heading_font)
     style.map("Treeview", background=[("selected", "#3a6ca8")], foreground=[("selected", "#ffffff")])
 
-    style.configure("UiCard.TLabelframe", padding=SPACE_2)
+    style.configure("UiCard.TLabelframe", padding=SPACE_2 + 2)
     style.configure("UiCard.TLabelframe.Label", font=title_font)
 
     style.configure("UiLabel.TLabel", font=small_ui_font)
     style.configure("UiLabelBold.TLabel", font=label_bold_font)
     style.configure("UiHint.TLabel", font=small_ui_font, foreground="#9eb0c9")
+
+    style.configure("TButton", padding=(12, 7))
+    style.configure("TEntry", padding=6)
+    style.configure("TCombobox", padding=4)
+    style.configure("TNotebook.Tab", padding=(14, 8), font=label_bold_font)
 
 
 def apply_tree_zebra_style(tree: ttk.Treeview) -> None:
