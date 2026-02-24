@@ -1,12 +1,14 @@
 import json
 import os
 import uuid
+import calendar
 from dataclasses import dataclass, asdict
 from datetime import datetime, date, timedelta
 from typing import List, Optional, Tuple
 
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
+import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 import tkinter.font as tkfont
@@ -221,45 +223,143 @@ class Store:
 # ----------------------------
 # UI styles / fonts
 # ----------------------------
-ZEBRA_EVEN = "#1f2530"
-ZEBRA_ODD = "#252c3a"
-DONE_FG = "#8f96a3"
+ZEBRA_EVEN = "#202736"
+ZEBRA_ODD = "#293347"
+DONE_FG = "#93a0b8"
 
-SPACE_1 = 6
-SPACE_2 = 10
-SPACE_3 = 14
+SPACE_1 = 8
+SPACE_2 = 12
+SPACE_3 = 16
 
 
 def setup_global_fonts_and_styles(root: tb.Window) -> None:
     default_font = tkfont.nametofont("TkDefaultFont")
-    default_font.configure(size=11)
+    default_font.configure(size=12)
     root.option_add("*Font", default_font)
 
     heading_font = tkfont.nametofont("TkHeadingFont")
-    heading_font.configure(size=11, weight="bold")
+    heading_font.configure(size=12, weight="bold")
 
-    title_font = tkfont.Font(family=default_font.cget("family"), size=12, weight="bold")
+    title_font = tkfont.Font(family=default_font.cget("family"), size=13, weight="bold")
 
-    small_ui_font = tkfont.Font(family=default_font.cget("family"), size=10)
-    label_bold_font = tkfont.Font(family=default_font.cget("family"), size=10, weight="bold")
+    small_ui_font = tkfont.Font(family=default_font.cget("family"), size=11)
+    label_bold_font = tkfont.Font(family=default_font.cget("family"), size=11, weight="bold")
 
     style = ttk.Style()
-    style.configure("Treeview", rowheight=32)
-    style.configure("Treeview.Heading", font=heading_font)
-    style.map("Treeview", background=[("selected", "#3a6ca8")], foreground=[("selected", "#ffffff")])
+    style.configure("Treeview", rowheight=42, borderwidth=0)
+    style.configure("Treeview.Heading", font=heading_font, padding=(10, 8))
+    style.map("Treeview", background=[("selected", "#2f6ca7")], foreground=[("selected", "#ffffff")])
 
-    style.configure("UiCard.TLabelframe", padding=SPACE_2)
+    style.configure("UiCard.TLabelframe", padding=SPACE_2 + 2)
     style.configure("UiCard.TLabelframe.Label", font=title_font)
 
     style.configure("UiLabel.TLabel", font=small_ui_font)
     style.configure("UiLabelBold.TLabel", font=label_bold_font)
     style.configure("UiHint.TLabel", font=small_ui_font, foreground="#9eb0c9")
 
+    style.configure("TButton", padding=(12, 7))
+    style.configure("TEntry", padding=6)
+    style.configure("TCombobox", padding=4)
+    style.configure("TNotebook.Tab", padding=(14, 8), font=label_bold_font)
+
 
 def apply_tree_zebra_style(tree: ttk.Treeview) -> None:
     tree.tag_configure("even", background=ZEBRA_EVEN)
     tree.tag_configure("odd", background=ZEBRA_ODD)
     tree.tag_configure("done", foreground=DONE_FG)
+
+
+class DatePickerPopup(tk.Toplevel):
+    def __init__(self, parent, initial_iso: Optional[str], on_select):
+        super().__init__(parent)
+        self.title("Vyber datum")
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+
+        self._on_select = on_select
+        self._selected_date: Optional[date] = None
+
+        initial = date.today()
+        if initial_iso:
+            try:
+                initial = date.fromisoformat(initial_iso)
+            except ValueError:
+                initial = date.today()
+
+        self._current_year = initial.year
+        self._current_month = initial.month
+
+        root = tb.Frame(self, padding=SPACE_2)
+        root.grid(row=0, column=0, sticky="nsew")
+
+        header = tb.Frame(root)
+        header.grid(row=0, column=0, columnspan=7, sticky="ew", pady=(0, SPACE_1))
+        header.grid_columnconfigure(1, weight=1)
+
+        tb.Button(header, text="◀", width=3, command=self._prev_month).grid(row=0, column=0, padx=(0, SPACE_1))
+        self._month_label = tb.Label(header, text="", anchor="center", style="UiLabelBold.TLabel")
+        self._month_label.grid(row=0, column=1, sticky="ew")
+        tb.Button(header, text="▶", width=3, command=self._next_month).grid(row=0, column=2, padx=(SPACE_1, 0))
+
+        weekday_names = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"]
+        for idx, name in enumerate(weekday_names):
+            tb.Label(root, text=name, style="UiLabelBold.TLabel", width=3, anchor="center").grid(
+                row=1, column=idx, padx=1, pady=(0, 2)
+            )
+
+        self._day_buttons: List[tb.Button] = []
+        for r in range(6):
+            for c in range(7):
+                btn = tb.Button(root, text="", width=3, command=lambda d=0: self._pick_day(d))
+                btn.grid(row=2 + r, column=c, padx=1, pady=1)
+                self._day_buttons.append(btn)
+
+        bottom = tb.Frame(root)
+        bottom.grid(row=8, column=0, columnspan=7, sticky="ew", pady=(SPACE_1, 0))
+        tb.Button(bottom, text="Bez data", bootstyle=SECONDARY, command=self._clear_date).pack(side=LEFT)
+        tb.Button(bottom, text="Zavřít", command=self.destroy).pack(side=RIGHT)
+
+        self.bind("<Escape>", lambda *_: self.destroy())
+        self._render_calendar()
+
+    def _render_calendar(self) -> None:
+        self._month_label.configure(text=f"{self._current_month:02d}.{self._current_year}")
+
+        month_matrix = calendar.monthcalendar(self._current_year, self._current_month)
+        flat_days = [d for week in month_matrix for d in week]
+        while len(flat_days) < len(self._day_buttons):
+            flat_days.append(0)
+
+        for btn, day_num in zip(self._day_buttons, flat_days):
+            if day_num == 0:
+                btn.configure(text="", state="disabled")
+                continue
+
+            btn.configure(text=str(day_num), state="normal", command=lambda d=day_num: self._pick_day(d))
+
+    def _prev_month(self) -> None:
+        self._current_month -= 1
+        if self._current_month < 1:
+            self._current_month = 12
+            self._current_year -= 1
+        self._render_calendar()
+
+    def _next_month(self) -> None:
+        self._current_month += 1
+        if self._current_month > 12:
+            self._current_month = 1
+            self._current_year += 1
+        self._render_calendar()
+
+    def _pick_day(self, day_num: int) -> None:
+        self._selected_date = date(self._current_year, self._current_month, day_num)
+        self._on_select(self._selected_date.isoformat())
+        self.destroy()
+
+    def _clear_date(self) -> None:
+        self._on_select("")
+        self.destroy()
 
 
 # ----------------------------
@@ -425,9 +525,10 @@ class TasksTab(tb.Frame):
 
         tb.Label(row1, text="Plán:", style="UiLabel.TLabel").grid(row=2, column=0, sticky="w", pady=(SPACE_1, 0))
         self.detail_planned_var = tb.StringVar(value="")
-        tb.Entry(row1, textvariable=self.detail_planned_var, width=14).grid(
-            row=2, column=1, sticky="w", padx=(SPACE_1, 0), pady=(SPACE_1, 0)
-        )
+        planned_controls = tb.Frame(row1)
+        planned_controls.grid(row=2, column=1, sticky="w", padx=(SPACE_1, 0), pady=(SPACE_1, 0))
+        tb.Entry(planned_controls, textvariable=self.detail_planned_var, width=14, state="readonly").pack(side=LEFT)
+        tb.Button(planned_controls, text="📅", width=3, command=self.open_detail_date_picker).pack(side=LEFT, padx=(SPACE_1, 0))
 
         tb.Label(row1, text="Vytvořeno:", style="UiLabel.TLabel").grid(row=3, column=0, sticky="w", pady=(SPACE_1, 0))
         self.detail_created_var = tb.StringVar(value="")
@@ -618,6 +719,14 @@ class TasksTab(tb.Frame):
         except Exception:
             pass
 
+    def open_detail_date_picker(self) -> None:
+        current_iso = cz_to_iso(self.detail_planned_var.get())
+        picker = DatePickerPopup(self, current_iso, self._on_detail_date_picked)
+        picker.wait_window()
+
+    def _on_detail_date_picked(self, selected_iso: str) -> None:
+        self.detail_planned_var.set(iso_to_cz(selected_iso) if selected_iso else "")
+
     def toggle_done_selected(self) -> None:
         task_id = self._get_selected_id()
         if not task_id:
@@ -667,10 +776,17 @@ class ProjectsTab(tb.Frame):
 
         self._build_ui()
         apply_tree_zebra_style(self.projects_tree)
+        self._setup_projects_tree_style()
         apply_tree_zebra_style(self.sub_tree)
 
         self.refresh_projects()
         self._clear_project_detail()
+
+    def _setup_projects_tree_style(self) -> None:
+        project_font = tkfont.Font(size=12, weight="bold")
+        self.projects_tree.tag_configure("project_even", background="#273244", font=project_font)
+        self.projects_tree.tag_configure("project_odd", background="#2c394d", font=project_font)
+        self.projects_tree.tag_configure("project_done", foreground=DONE_FG)
 
     def current_view_done(self) -> bool:
         return self.view_var.get() == "done"
@@ -731,15 +847,11 @@ class ProjectsTab(tb.Frame):
 
         row1 = tb.Frame(detail)
         row1.grid(row=0, column=0, sticky="ew")
-        row1.grid_columnconfigure(1, weight=1)
+        row1.grid_columnconfigure(0, weight=1)
 
-        tb.Label(row1, text="Název:", style="UiLabel.TLabel").grid(row=0, column=0, sticky="w")
-        self.proj_title_var = tb.StringVar()
-        tb.Entry(row1, textvariable=self.proj_title_var).grid(row=0, column=1, sticky="ew", padx=(8, 12))
-
-        tb.Label(row1, text="Vytvořeno:", style="UiLabel.TLabel").grid(row=0, column=2, sticky="w")
+        tb.Label(row1, text="Vytvořeno:", style="UiLabel.TLabel").grid(row=0, column=0, sticky="e")
         self.proj_created_var = tb.StringVar(value="")
-        tb.Entry(row1, textvariable=self.proj_created_var, width=18, state="readonly").grid(row=0, column=3, sticky="e", padx=(8, 0))
+        tb.Entry(row1, textvariable=self.proj_created_var, width=18, state="readonly").grid(row=0, column=1, sticky="e", padx=(8, 0))
 
         row2 = tb.Frame(detail)
         row2.grid(row=1, column=0, sticky="ew", pady=(SPACE_2, 0))
@@ -836,9 +948,9 @@ class ProjectsTab(tb.Frame):
             if p.done != show_done:
                 continue
             state = "Vyřešeno" if p.done else "Aktivní"
-            tags = ["even" if visible_idx % 2 == 0 else "odd"]
+            tags = ["project_even" if visible_idx % 2 == 0 else "project_odd"]
             if p.done:
-                tags.append("done")
+                tags.append("project_done")
             self.projects_tree.insert("", "end", iid=p.id, values=(p.title, p.created_at, state), tags=tuple(tags))
             visible_idx += 1
 
@@ -878,7 +990,6 @@ class ProjectsTab(tb.Frame):
             return
 
         self.selected_project_id = p.id
-        self.proj_title_var.set(p.title)
         self.proj_created_var.set(p.created_at)
         self.proj_notes.delete("1.0", "end")
         self.proj_notes.insert("1.0", p.notes or "")
@@ -893,12 +1004,6 @@ class ProjectsTab(tb.Frame):
             self._clear_project_detail()
             return
 
-        title = self.proj_title_var.get().strip()
-        if not title:
-            messagebox.showwarning("Název", "Název projektu nemůže být prázdný.")
-            return
-
-        p.title = title
         p.notes = self.proj_notes.get("1.0", "end").rstrip()
 
         self.store.save()
@@ -1012,7 +1117,6 @@ class ProjectsTab(tb.Frame):
     def _clear_project_detail(self) -> None:
         self.selected_project_id = None
         self.selected_subtask_id = None
-        self.proj_title_var.set("")
         self.proj_created_var.set("")
         self.proj_notes.delete("1.0", "end")
         for item in self.sub_tree.get_children():
