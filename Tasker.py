@@ -1,12 +1,14 @@
 import json
 import os
 import uuid
+import calendar
 from dataclasses import dataclass, asdict
 from datetime import datetime, date, timedelta
 from typing import List, Optional, Tuple
 
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
+import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 import tkinter.font as tkfont
@@ -262,6 +264,99 @@ def apply_tree_zebra_style(tree: ttk.Treeview) -> None:
     tree.tag_configure("done", foreground=DONE_FG)
 
 
+class DatePickerPopup(tk.Toplevel):
+    def __init__(self, parent, initial_iso: Optional[str], on_select):
+        super().__init__(parent)
+        self.title("Vyber datum")
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+
+        self._on_select = on_select
+        self._selected_date: Optional[date] = None
+
+        initial = date.today()
+        if initial_iso:
+            try:
+                initial = date.fromisoformat(initial_iso)
+            except ValueError:
+                initial = date.today()
+
+        self._current_year = initial.year
+        self._current_month = initial.month
+
+        root = tb.Frame(self, padding=SPACE_2)
+        root.grid(row=0, column=0, sticky="nsew")
+
+        header = tb.Frame(root)
+        header.grid(row=0, column=0, columnspan=7, sticky="ew", pady=(0, SPACE_1))
+        header.grid_columnconfigure(1, weight=1)
+
+        tb.Button(header, text="◀", width=3, command=self._prev_month).grid(row=0, column=0, padx=(0, SPACE_1))
+        self._month_label = tb.Label(header, text="", anchor="center", style="UiLabelBold.TLabel")
+        self._month_label.grid(row=0, column=1, sticky="ew")
+        tb.Button(header, text="▶", width=3, command=self._next_month).grid(row=0, column=2, padx=(SPACE_1, 0))
+
+        weekday_names = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"]
+        for idx, name in enumerate(weekday_names):
+            tb.Label(root, text=name, style="UiLabelBold.TLabel", width=3, anchor="center").grid(
+                row=1, column=idx, padx=1, pady=(0, 2)
+            )
+
+        self._day_buttons: List[tb.Button] = []
+        for r in range(6):
+            for c in range(7):
+                btn = tb.Button(root, text="", width=3, command=lambda d=0: self._pick_day(d))
+                btn.grid(row=2 + r, column=c, padx=1, pady=1)
+                self._day_buttons.append(btn)
+
+        bottom = tb.Frame(root)
+        bottom.grid(row=8, column=0, columnspan=7, sticky="ew", pady=(SPACE_1, 0))
+        tb.Button(bottom, text="Bez data", bootstyle=SECONDARY, command=self._clear_date).pack(side=LEFT)
+        tb.Button(bottom, text="Zavřít", command=self.destroy).pack(side=RIGHT)
+
+        self.bind("<Escape>", lambda *_: self.destroy())
+        self._render_calendar()
+
+    def _render_calendar(self) -> None:
+        self._month_label.configure(text=f"{self._current_month:02d}.{self._current_year}")
+
+        month_matrix = calendar.monthcalendar(self._current_year, self._current_month)
+        flat_days = [d for week in month_matrix for d in week]
+        while len(flat_days) < len(self._day_buttons):
+            flat_days.append(0)
+
+        for btn, day_num in zip(self._day_buttons, flat_days):
+            if day_num == 0:
+                btn.configure(text="", state="disabled")
+                continue
+
+            btn.configure(text=str(day_num), state="normal", command=lambda d=day_num: self._pick_day(d))
+
+    def _prev_month(self) -> None:
+        self._current_month -= 1
+        if self._current_month < 1:
+            self._current_month = 12
+            self._current_year -= 1
+        self._render_calendar()
+
+    def _next_month(self) -> None:
+        self._current_month += 1
+        if self._current_month > 12:
+            self._current_month = 1
+            self._current_year += 1
+        self._render_calendar()
+
+    def _pick_day(self, day_num: int) -> None:
+        self._selected_date = date(self._current_year, self._current_month, day_num)
+        self._on_select(self._selected_date.isoformat())
+        self.destroy()
+
+    def _clear_date(self) -> None:
+        self._on_select("")
+        self.destroy()
+
+
 # ----------------------------
 # UI: Tasks tab
 # ----------------------------
@@ -425,9 +520,10 @@ class TasksTab(tb.Frame):
 
         tb.Label(row1, text="Plán:", style="UiLabel.TLabel").grid(row=2, column=0, sticky="w", pady=(SPACE_1, 0))
         self.detail_planned_var = tb.StringVar(value="")
-        tb.Entry(row1, textvariable=self.detail_planned_var, width=14).grid(
-            row=2, column=1, sticky="w", padx=(SPACE_1, 0), pady=(SPACE_1, 0)
-        )
+        planned_controls = tb.Frame(row1)
+        planned_controls.grid(row=2, column=1, sticky="w", padx=(SPACE_1, 0), pady=(SPACE_1, 0))
+        tb.Entry(planned_controls, textvariable=self.detail_planned_var, width=14, state="readonly").pack(side=LEFT)
+        tb.Button(planned_controls, text="📅", width=3, command=self.open_detail_date_picker).pack(side=LEFT, padx=(SPACE_1, 0))
 
         tb.Label(row1, text="Vytvořeno:", style="UiLabel.TLabel").grid(row=3, column=0, sticky="w", pady=(SPACE_1, 0))
         self.detail_created_var = tb.StringVar(value="")
@@ -617,6 +713,14 @@ class TasksTab(tb.Frame):
             self.tree.selection_set(t.id)
         except Exception:
             pass
+
+    def open_detail_date_picker(self) -> None:
+        current_iso = cz_to_iso(self.detail_planned_var.get())
+        picker = DatePickerPopup(self, current_iso, self._on_detail_date_picked)
+        picker.wait_window()
+
+    def _on_detail_date_picked(self, selected_iso: str) -> None:
+        self.detail_planned_var.set(iso_to_cz(selected_iso) if selected_iso else "")
 
     def toggle_done_selected(self) -> None:
         task_id = self._get_selected_id()
