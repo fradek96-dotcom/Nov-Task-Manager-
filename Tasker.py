@@ -246,7 +246,7 @@ def setup_global_fonts_and_styles(root: tb.Window) -> None:
     label_bold_font = tkfont.Font(family=default_font.cget("family"), size=10, weight="bold")
 
     style = ttk.Style()
-    style.configure("Treeview", rowheight=32)
+    style.configure("Treeview", rowheight=40)
     style.configure("Treeview.Heading", font=heading_font)
     style.map("Treeview", background=[("selected", "#3a6ca8")], foreground=[("selected", "#ffffff")])
 
