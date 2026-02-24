@@ -773,6 +773,7 @@ class ProjectsTab(tb.Frame):
         self.view_var = tb.StringVar(value="active")
         self.selected_project_id: Optional[str] = None
         self.selected_subtask_id: Optional[str] = None
+        self.project_detail_expanded = False
 
         self._build_ui()
         apply_tree_zebra_style(self.projects_tree)
@@ -790,6 +791,18 @@ class ProjectsTab(tb.Frame):
 
     def current_view_done(self) -> bool:
         return self.view_var.get() == "done"
+
+    def _toggle_project_detail(self) -> None:
+        self.project_detail_expanded = not self.project_detail_expanded
+        self._set_project_detail_visibility()
+
+    def _set_project_detail_visibility(self) -> None:
+        if self.project_detail_expanded:
+            self.project_detail_content.grid()
+            self.project_detail_toggle_btn.configure(text="Skrýt detail ▲")
+        else:
+            self.project_detail_content.grid_remove()
+            self.project_detail_toggle_btn.configure(text="Zobrazit detail ▼")
 
     def _build_ui(self) -> None:
         # IMPORTANT: use grid so bottom bar is always visible
@@ -844,6 +857,7 @@ class ProjectsTab(tb.Frame):
         detail = tb.Labelframe(pane_bottom, text="Detail projektu", style="UiCard.TLabelframe")
         detail.grid(row=0, column=0, sticky="nsew")
         detail.grid_columnconfigure(0, weight=1)
+        detail.grid_rowconfigure(2, weight=1)
 
         row1 = tb.Frame(detail)
         row1.grid(row=0, column=0, sticky="ew")
@@ -865,9 +879,10 @@ class ProjectsTab(tb.Frame):
         row3.grid(row=2, column=0, sticky="ew", pady=(SPACE_1, SPACE_1))
         tb.Button(row3, text="Uložit projekt", bootstyle=PRIMARY, command=self.save_project).pack(side=LEFT)
 
+        self._set_project_detail_visibility()
+
         sub = tb.Labelframe(detail, text="Podúkoly (postup)", style="UiCard.TLabelframe")
-        sub.grid(row=3, column=0, sticky="nsew")
-        detail.grid_rowconfigure(3, weight=1)
+        sub.grid(row=2, column=0, sticky="nsew")
         sub.grid_columnconfigure(0, weight=1)
         sub.grid_rowconfigure(1, weight=1)
 
