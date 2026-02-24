@@ -246,9 +246,9 @@ def setup_global_fonts_and_styles(root: tb.Window) -> None:
     label_bold_font = tkfont.Font(family=default_font.cget("family"), size=11, weight="bold")
 
     style = ttk.Style()
-    style.configure("Treeview", rowheight=42, borderwidth=0)
-    style.configure("Treeview.Heading", font=heading_font, padding=(10, 8))
-    style.map("Treeview", background=[("selected", "#2f6ca7")], foreground=[("selected", "#ffffff")])
+    style.configure("Treeview", rowheight=40)
+    style.configure("Treeview.Heading", font=heading_font)
+    style.map("Treeview", background=[("selected", "#3a6ca8")], foreground=[("selected", "#ffffff")])
 
     style.configure("UiCard.TLabelframe", padding=SPACE_2 + 2)
     style.configure("UiCard.TLabelframe.Label", font=title_font)
@@ -783,7 +783,7 @@ class ProjectsTab(tb.Frame):
         self._clear_project_detail()
 
     def _setup_projects_tree_style(self) -> None:
-        project_font = tkfont.Font(size=12, weight="bold")
+        project_font = tkfont.Font(size=11, weight="bold")
         self.projects_tree.tag_configure("project_even", background="#273244", font=project_font)
         self.projects_tree.tag_configure("project_odd", background="#2c394d", font=project_font)
         self.projects_tree.tag_configure("project_done", foreground=DONE_FG)
