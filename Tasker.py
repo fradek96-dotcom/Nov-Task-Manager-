@@ -837,7 +837,7 @@ class ProjectsTab(tb.Frame):
 
         # Pane bottom: detail + subtasks
         pane_bottom = tb.Frame(self.paned)
-        self.paned.add(pane_bottom, weight=2)
+        self.paned.add(pane_bottom, weight=3)
         pane_bottom.grid_columnconfigure(0, weight=1)
         pane_bottom.grid_rowconfigure(0, weight=1)
 
@@ -854,15 +854,15 @@ class ProjectsTab(tb.Frame):
         tb.Entry(row1, textvariable=self.proj_created_var, width=18, state="readonly").grid(row=0, column=1, sticky="e", padx=(8, 0))
 
         row2 = tb.Frame(detail)
-        row2.grid(row=1, column=0, sticky="ew", pady=(SPACE_2, 0))
+        row2.grid(row=1, column=0, sticky="ew", pady=(SPACE_1, 0))
         row2.grid_columnconfigure(0, weight=1)
 
         tb.Label(row2, text="Popis / poznámka projektu:", style="UiLabel.TLabel").grid(row=0, column=0, sticky="w")
-        self.proj_notes = tb.Text(row2, height=4, wrap="word")
-        self.proj_notes.grid(row=1, column=0, sticky="ew", pady=(6, 0))
+        self.proj_notes = tb.Text(row2, height=2, wrap="word")
+        self.proj_notes.grid(row=1, column=0, sticky="ew", pady=(SPACE_1, 0))
 
         row3 = tb.Frame(detail)
-        row3.grid(row=2, column=0, sticky="ew", pady=(SPACE_2, SPACE_2))
+        row3.grid(row=2, column=0, sticky="ew", pady=(SPACE_1, SPACE_1))
         tb.Button(row3, text="Uložit projekt", bootstyle=PRIMARY, command=self.save_project).pack(side=LEFT)
 
         sub = tb.Labelframe(detail, text="Podúkoly (postup)", style="UiCard.TLabelframe")
@@ -883,7 +883,7 @@ class ProjectsTab(tb.Frame):
         tb.Button(sub_top, text="Přidat", bootstyle=SUCCESS, command=self.add_subtask).grid(row=0, column=2, sticky="e")
 
         sub_mid = tb.Frame(sub)
-        sub_mid.grid(row=1, column=0, sticky="nsew", pady=(SPACE_2, 0))
+        sub_mid.grid(row=1, column=0, sticky="nsew", pady=(SPACE_1, 0))
         sub_mid.grid_columnconfigure(0, weight=1)
         sub_mid.grid_rowconfigure(0, weight=1)
 
