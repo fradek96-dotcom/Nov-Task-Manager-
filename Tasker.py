@@ -246,9 +246,9 @@ def setup_global_fonts_and_styles(root: tb.Window) -> None:
     label_bold_font = tkfont.Font(family=default_font.cget("family"), size=11, weight="bold")
 
     style = ttk.Style()
-    style.configure("Treeview", rowheight=42, borderwidth=0)
-    style.configure("Treeview.Heading", font=heading_font, padding=(10, 8))
-    style.map("Treeview", background=[("selected", "#2f6ca7")], foreground=[("selected", "#ffffff")])
+    style.configure("Treeview", rowheight=40)
+    style.configure("Treeview.Heading", font=heading_font)
+    style.map("Treeview", background=[("selected", "#3a6ca8")], foreground=[("selected", "#ffffff")])
 
     style.configure("UiCard.TLabelframe", padding=SPACE_2 + 2)
     style.configure("UiCard.TLabelframe.Label", font=title_font)
@@ -784,7 +784,7 @@ class ProjectsTab(tb.Frame):
         self._clear_project_detail()
 
     def _setup_projects_tree_style(self) -> None:
-        project_font = tkfont.Font(size=12, weight="bold")
+        project_font = tkfont.Font(size=11, weight="bold")
         self.projects_tree.tag_configure("project_even", background="#273244", font=project_font)
         self.projects_tree.tag_configure("project_odd", background="#2c394d", font=project_font)
         self.projects_tree.tag_configure("project_done", foreground=DONE_FG)
@@ -859,22 +859,7 @@ class ProjectsTab(tb.Frame):
         detail.grid_columnconfigure(0, weight=1)
         detail.grid_rowconfigure(2, weight=1)
 
-        detail_header = tb.Frame(detail)
-        detail_header.grid(row=0, column=0, sticky="ew", pady=(0, SPACE_1))
-        detail_header.grid_columnconfigure(0, weight=1)
-
-        self.project_detail_toggle_btn = tb.Button(
-            detail_header,
-            text="",
-            bootstyle=SECONDARY,
-            command=self._toggle_project_detail,
-        )
-        self.project_detail_toggle_btn.grid(row=0, column=0, sticky="w")
-
-        self.project_detail_content = tb.Frame(detail)
-        self.project_detail_content.grid(row=1, column=0, sticky="ew", pady=(0, SPACE_1))
-
-        row1 = tb.Frame(self.project_detail_content)
+        row1 = tb.Frame(detail)
         row1.grid(row=0, column=0, sticky="ew")
         row1.grid_columnconfigure(0, weight=1)
 
@@ -882,7 +867,7 @@ class ProjectsTab(tb.Frame):
         self.proj_created_var = tb.StringVar(value="")
         tb.Entry(row1, textvariable=self.proj_created_var, width=18, state="readonly").grid(row=0, column=1, sticky="e", padx=(8, 0))
 
-        row2 = tb.Frame(self.project_detail_content)
+        row2 = tb.Frame(detail)
         row2.grid(row=1, column=0, sticky="ew", pady=(SPACE_1, 0))
         row2.grid_columnconfigure(0, weight=1)
 
@@ -890,8 +875,8 @@ class ProjectsTab(tb.Frame):
         self.proj_notes = tb.Text(row2, height=2, wrap="word")
         self.proj_notes.grid(row=1, column=0, sticky="ew", pady=(SPACE_1, 0))
 
-        row3 = tb.Frame(self.project_detail_content)
-        row3.grid(row=2, column=0, sticky="ew", pady=(SPACE_1, 0))
+        row3 = tb.Frame(detail)
+        row3.grid(row=2, column=0, sticky="ew", pady=(SPACE_1, SPACE_1))
         tb.Button(row3, text="Uložit projekt", bootstyle=PRIMARY, command=self.save_project).pack(side=LEFT)
 
         self._set_project_detail_visibility()
